@@ -30,5 +30,9 @@ public class ProcessRecordH {
   public static IntFieldDef uid;
   public static IntFieldDef pid;
 
+  // Params used in starting this process.
+  public static FieldDef<String> hostingType;
+  public static FieldDef<String> hostingNameStr;
+
 
 }

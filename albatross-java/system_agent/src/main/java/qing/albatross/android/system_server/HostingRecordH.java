@@ -18,7 +18,7 @@ package qing.albatross.android.system_server;
 import qing.albatross.annotation.MethodBackup;
 import qing.albatross.annotation.TargetClass;
 
-@TargetClass(className = "com.android.server.am.HostingRecord")
+@TargetClass(className = "com.android.server.am.HostingRecord", required = false)
 public class HostingRecordH {
 
   @MethodBackup

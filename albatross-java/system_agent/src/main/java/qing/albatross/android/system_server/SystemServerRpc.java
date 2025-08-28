@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Build;
 import android.os.UserHandle;
 
 import java.util.HashMap;
@@ -294,16 +295,23 @@ public class SystemServerRpc extends UnixRpcInstance implements SystemServerApi 
     return count;
   }
 
+
   @Override
   public boolean init() {
     if (activityManager != null)
       return true;
     try {
       Albatross.transactionBegin();
-      Albatross.hookClass(HostingRecordH.class);
       Albatross.hookClass(ProcessRecordH.class);
-      if (ProcessRecordH.hostingRecord == null) {
-        ProcessRecordH.hostingRecord = ProcessRecordH.mHostingRecord;
+      if (ProcessRecordH.hostingNameStr == null) {
+        if (Build.VERSION.SDK_INT >= 29) {
+          Albatross.hookClass(HostingRecordH.class);
+          if (ProcessRecordH.hostingRecord == null) {
+            ProcessRecordH.hostingRecord = ProcessRecordH.mHostingRecord;
+          }
+        }
+      } else {
+        Albatross.log("android old version which not have HostingRecord");
       }
       if (Albatross.hookClass(ContextImplH.class) <= 0)
         return false;

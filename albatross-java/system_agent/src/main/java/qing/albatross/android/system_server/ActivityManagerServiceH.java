@@ -18,6 +18,8 @@ package qing.albatross.android.system_server;
 import static qing.albatross.android.system_server.SystemServerRpc.shouldInterceptUid;
 
 import android.content.pm.ApplicationInfo;
+import android.os.Build;
+import android.util.SparseArray;
 
 import org.json.JSONObject;
 
@@ -31,12 +33,14 @@ import qing.albatross.reflection.FieldDef;
 public class ActivityManagerServiceH {
 
 
-  @TargetClass(className = "com.android.server.am.ActivityManagerService$PidMap")
+  @TargetClass(className = "com.android.server.am.ActivityManagerService$PidMap", required = false)
   public static class PidMapH {
     @MethodBackup
     public static native Object get(Object pidMap, int pid);
   }
 
+  // PidMap mPidsSelfLocked androidQ  ProcessRecord
+  //android9 final SparseArray<ProcessRecord> mPidsSelfLocked = new SparseArray<ProcessRecord>();
   static FieldDef<Object> mPidsSelfLocked;
 
 
@@ -64,18 +68,37 @@ public class ActivityManagerServiceH {
         jsonObject.put("uid", callingUid);
         jsonObject.put("pid", pid);
         Object pids = mPidsSelfLocked.get(ams);
-        Object processRecord = PidMapH.get(pids, pid);
-        Object hostingRecord = ProcessRecordH.hostingRecord.get(processRecord);
+        Object processRecord;
+        if (pids instanceof SparseArray) {
+          SparseArray sparseArray = (SparseArray) (pids);
+          processRecord = sparseArray.get(pid);
+        } else
+          processRecord = PidMapH.get(pids, pid);
+
         String processName = ProcessRecordH.processName.get(processRecord);
         ApplicationInfo applicationInfo = ProcessRecordH.info.get(processRecord);
         if (applicationInfo != null) {
           jsonObject.put("pkg", applicationInfo.packageName);
         }
-        String name = HostingRecordH.getName(hostingRecord);
-        String componentType = HostingRecordH.getType(hostingRecord);
         jsonObject.put("process", processName);
-        jsonObject.put("type", componentType);
-        jsonObject.put("name", name);
+        String name = null;
+        String componentType = null;
+        if (ProcessRecordH.hostingNameStr != null) {
+          name = ProcessRecordH.hostingNameStr.get(processRecord);
+          componentType = ProcessRecordH.hostingType.get(processRecord);
+        } else {
+          if (Build.VERSION.SDK_INT >= 29) {
+            Object hostingRecord = ProcessRecordH.hostingRecord.get(processRecord);
+            name = HostingRecordH.getName(hostingRecord);
+            componentType = HostingRecordH.getType(hostingRecord);
+          }
+        }
+        if (componentType != null) {
+          jsonObject.put("type", componentType);
+          jsonObject.put("name", name);
+        }
+
+
         SystemServerRpc.v().launchProcess(jsonObject.toString());
       } catch (Exception e) {
         Albatross.log("interceptCheck", e);

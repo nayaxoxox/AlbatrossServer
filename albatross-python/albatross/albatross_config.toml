@@ -1,8 +1,13 @@
 lib_name = "libalbatross_base.so"
 #adb_path=
 #jni_libs=
+
+#albatross-java/app_agent/build/outputs/apk/release/xxxxx.apk
 #agent_dir=
+
+#albatross-java/app_agent/build/outputs/apk/release/xxxx.apk
 #system_server_agent_file=
+
 #app_agent_file=
 #albatross_class_name=
 #clear_history_launch=

@@ -15,6 +15,8 @@
 from typing import Optional
 from . import device
 
+__version__ = "1.0.0"
+
 
 def get_device(device_id: Optional[str] = None) -> device.AlbatrossDevice:
   return device.get_device_manager().get_devices(device_id)

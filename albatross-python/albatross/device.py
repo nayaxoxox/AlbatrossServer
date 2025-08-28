@@ -408,7 +408,7 @@ class AlbatrossDevice(object):
     update = self.push_file(Configuration.system_server_agent_file, agent_dst, mode='444')
     if update:
       self.restart_system_server()
-      time.sleep(10)
+      time.sleep(20)
     server_pid = client.get_process_pid('system_server')
     if server_pid <= 0:
       self.restart_system_server()

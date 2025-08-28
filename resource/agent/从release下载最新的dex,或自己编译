@@ -1,0 +1,4 @@
+
+自己编译albatross_config_local.toml需要配置以下变量
+system_server_agent_file
+app_agent_file

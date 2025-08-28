@@ -33,3 +33,8 @@ class NoDeviceFound(AlbatrossException):
 class DeviceNotRoot(AlbatrossException):
   def __init__(self, device):
     self.device = device
+
+
+class PackageNotInstalled(AlbatrossException):
+  def __init__(self, package):
+    self.package = package

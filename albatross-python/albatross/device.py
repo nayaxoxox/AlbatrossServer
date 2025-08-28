@@ -17,17 +17,16 @@ import re
 import socket
 import subprocess
 import time
-from collections import namedtuple
+
+from .albatross_client import AlbatrossClient, DexLoadResult, InjectFlag, LoadDexFlag, RunTimeISA
+from .common import Configuration, run_shell
+from .exceptions import DeviceOffline, NoDeviceFound, DeviceNoFindErr, DeviceNotRoot, PackageNotInstalled
 from .rpc_client import byte
-from .exceptions import DeviceOffline, NoDeviceFound, DeviceNoFindErr, DeviceNotRoot
 from .system_server_client import SystemServerClient
 from .wrapper import cached_property
-from .common import Configuration, run_shell
-from .albatross_client import AlbatrossClient, DexLoadResult, InjectFlag, LoadDexFlag, RunTimeISA
 
 
 def check_socket_port(ip, port):
-
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = s.connect_ex((ip, port))
@@ -89,7 +88,7 @@ def file_md5(file_path):
   return None
 
 
-AppInjectInfo = namedtuple("AppInjectInfo", ['dex', 'arg_str', 'arg_init'])
+pkg_pattern = re.compile(r"package:([\w.]+)(?:\s+|$)")
 
 
 class AlbatrossDevice(object):
@@ -100,12 +99,14 @@ class AlbatrossDevice(object):
   lib32_dir: str
   update_kill = True
   lib32_dst: str
+  max_launch_count = 20
 
   def __init__(self, device_id):
     self.device_id = device_id
     self.cmd = adb_path + " -s " + device_id + " "
     self.shellcmd = self.cmd + "shell "
     self.process_launch_callback = {}
+    self.app_launch_count = {}
 
   def shell(self, cmd, timeout=None) -> list | str:
     cmd = self.shellcmd + "'" + cmd + "'"
@@ -313,7 +314,7 @@ class AlbatrossDevice(object):
     if pid:
       self.root_shell("kill -{} {}".format(sig, pid))
 
-  def __on_close(self):
+  def __on_close(self, client):
     cached_property.delete(self, 'client')
     print('albatross server disconnected')
 
@@ -419,8 +420,8 @@ class AlbatrossDevice(object):
     if res < 0:
       return cached_property.nil_value
     res = client.load_dex(server_pid, agent_dst, None, Configuration.albatross_class_name,
-      Configuration.system_server_init_class, Configuration.albatross_register_func, SystemServerClient.dex_flags,
-      timeout=30)
+      Configuration.system_server_init_class, Configuration.albatross_register_func,
+      SystemServerClient.dex_flags, timeout=30)
     if res in [DexLoadResult.DEX_LOAD_SUCCESS, DexLoadResult.DEX_ALREADY_LOAD]:
       port = self.get_forward_port(Configuration.system_server_address)
       system_server = SystemServerClient('127.0.0.1', port, 'system-' + self.device_id)
@@ -469,12 +470,17 @@ class AlbatrossDevice(object):
     uid = process_info['uid']
     inject_record = self.process_launch_callback.get(uid)
     if inject_record:
-      pid = process_info['pid']
-      inject_dex, dex_lib, injector_class, arg_str, arg_int = inject_record
-      self.attach(pid, inject_dex, dex_lib, injector_class, arg_str, arg_int, LoadDexFlag.FLAG_INJECT)
+      count = self.app_launch_count[uid]
+      self.app_launch_count[uid] = count + 1
+      if count < self.max_launch_count:
+        pid = process_info['pid']
+        inject_dex, dex_lib, injector_class, arg_str, arg_int = inject_record
+        self.attach(pid, inject_dex, dex_lib, injector_class, arg_str, arg_int, LoadDexFlag.FLAG_INJECT)
     return 1
 
   def launch(self, target_package, inject_dex, dex_lib, injector_class, arg_str: str = None, arg_int: int = 0):
+    if not self.is_app_install(target_package):
+      raise PackageNotInstalled(target_package)
     launch_callback = self.process_launch_callback
     clear_history_launch = Configuration.clear_history_launch
     if clear_history_launch:
@@ -485,6 +491,7 @@ class AlbatrossDevice(object):
     app_id = server_client.set_intercept_app(target_package, clear_history_launch)
     assert self.system_server_subscriber
     launch_callback[app_id] = (inject_dex, dex_lib, injector_class, arg_str, arg_int)
+    self.app_launch_count[app_id] = 0
     server_client.start_activity(target_package, None, 0)
 
   def attach(self, package_or_pid, inject_dex, dex_lib, injector_class, arg_str: str = None, arg_int: int = 0,
@@ -524,7 +531,6 @@ class AlbatrossDevice(object):
   def get_forward_port(self, remote_port, not_check=True):
     if isinstance(remote_port, int):
       remote_port = 'tcp:' + str(remote_port)
-    # remote_port = 'tcp:%d' % server_port
     for s, lp, rp in self.forward_list():
       if rp == remote_port and s == self:
         local_port = int(lp[4:])
@@ -572,6 +578,24 @@ class AlbatrossDevice(object):
           return True
     else:
       return False
+
+  def is_app_install(self, pkg):
+    return pkg in self.get_user_packages(include_disabled=True)
+
+  def get_user_packages(self, include_disabled=False):
+    if include_disabled:
+      pkgs = self.shell('pm list packages -3')
+    else:
+      pkgs = self.shell('pm list packages -3 -e')
+    return pkg_pattern.findall(pkgs)
+
+  def home(self):
+    cmd = self.shellcmd + "input keyevent 3"
+    run_shell(cmd)
+
+  def switch_app(self):
+    cmd = self.shellcmd + 'input keyevent KEYCODE_APP_SWITCH'
+    run_shell(cmd)
 
 
 _device_manager = None

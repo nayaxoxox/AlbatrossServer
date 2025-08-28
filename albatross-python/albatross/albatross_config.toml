@@ -1,0 +1,20 @@
+lib_name = "libalbatross_base.so"
+#adb_path=
+#jni_libs=
+#agent_dir=
+#system_server_agent_file=
+#app_agent_file=
+#albatross_class_name=
+#clear_history_launch=
+#albatross_agent_class=
+#albatross_register_func
+#system_server_agent_dst=
+#app_agent_dst
+#app_injector_dir
+#support_abi_list
+#abi_lib_names=
+#server_dst_path=
+#lib_path=
+#server_port=
+#system_server_address=
+#system_server_init_class=

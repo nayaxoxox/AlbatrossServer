@@ -1,0 +1,86 @@
+/*
+ * Copyright 2025 QingWan (qingwanmail@foxmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package qing.albatross.android.system_server;
+
+import static qing.albatross.android.system_server.SystemServerRpc.shouldInterceptUid;
+
+import android.content.pm.ApplicationInfo;
+
+import org.json.JSONObject;
+
+import qing.albatross.annotation.MethodBackup;
+import qing.albatross.annotation.MethodHook;
+import qing.albatross.annotation.TargetClass;
+import qing.albatross.core.Albatross;
+import qing.albatross.reflection.FieldDef;
+
+@TargetClass(className = "com.android.server.am.ActivityManagerService")
+public class ActivityManagerServiceH {
+
+
+  @TargetClass(className = "com.android.server.am.ActivityManagerService$PidMap")
+  public static class PidMapH {
+    @MethodBackup
+    public static native Object get(Object pidMap, int pid);
+  }
+
+  static FieldDef<Object> mPidsSelfLocked;
+
+
+  @MethodBackup
+  @MethodHook({"android.app.IApplicationThread", "int", "int", "long"})
+  static boolean attachApplicationLocked(Object ams, Object iApplicationThread,
+                                         int pid, int callingUid, long startSeq) {
+    interceptCheck(ams, pid, callingUid);
+    return attachApplicationLocked(ams, iApplicationThread, pid, callingUid, startSeq);
+  }
+
+
+  @MethodBackup
+  @MethodHook({"android.app.IApplicationThread", "int", "int", "long"})
+  static void attachApplicationLocked$Hook_U(Object ams, Object iApplicationThread,
+                                             int pid, int callingUid, long startSeq) {
+    interceptCheck(ams, pid, callingUid);
+    attachApplicationLocked$Hook_U(ams, iApplicationThread, pid, callingUid, startSeq);
+  }
+
+  private static void interceptCheck(Object ams, int pid, int callingUid) {
+    if (shouldInterceptUid(callingUid)) {
+      try {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("uid", callingUid);
+        jsonObject.put("pid", pid);
+        Object pids = mPidsSelfLocked.get(ams);
+        Object processRecord = PidMapH.get(pids, pid);
+        Object hostingRecord = ProcessRecordH.hostingRecord.get(processRecord);
+        String processName = ProcessRecordH.processName.get(processRecord);
+        ApplicationInfo applicationInfo = ProcessRecordH.info.get(processRecord);
+        if (applicationInfo != null) {
+          jsonObject.put("pkg", applicationInfo.packageName);
+        }
+        String name = HostingRecordH.getName(hostingRecord);
+        String componentType = HostingRecordH.getType(hostingRecord);
+        jsonObject.put("process", processName);
+        jsonObject.put("type", componentType);
+        jsonObject.put("name", name);
+        SystemServerRpc.v().launchProcess(jsonObject.toString());
+      } catch (Exception e) {
+        Albatross.log("interceptCheck", e);
+      }
+    }
+  }
+
+}

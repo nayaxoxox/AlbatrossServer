@@ -1,0 +1,28 @@
+/*
+ * Copyright 2025 QingWan (qingwanmail@foxmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package qing.albatross.android.system_server;
+
+import android.app.ActivityManager;
+
+import qing.albatross.annotation.MethodBackup;
+import qing.albatross.annotation.TargetClass;
+
+@TargetClass(ActivityManager.class)
+public class ActivityManagerH {
+  @MethodBackup/*(virtualCall = true)*/
+  public static native void forceStopPackageAsUser(ActivityManager activityManager, String packageName, int userId);
+
+}

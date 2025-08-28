@@ -80,10 +80,6 @@ class DexSetResult(ByteEnum):
 
 
 class AlbatrossClient(RpcClient):
-  app_inject_dex = None
-  lib_path = None
-  class_name = None
-  default_port = 19088
 
   @rpc_api
   def get_process_isa(self, pid: int) -> RunTimeISA:
@@ -132,7 +128,6 @@ class AlbatrossClient(RpcClient):
                loader_symbol_name: str, flags: LoadDexFlag) -> DexLoadResult:
     pass
 
-
   @rpc_api
   def detach(self, pid: int, flags: InjectFlag) -> bool:
     pass
@@ -149,12 +144,6 @@ class AlbatrossClient(RpcClient):
   def set_system_server_agent(self, dex_path: str, server_name: str = 'system_server',
                               load_flags: LoadDexFlag = LoadDexFlag.NONE) -> DexSetResult:
     pass
-
-  def set_app_inject_dex_info(self, dex_path, lib_path, class_name):
-    self.app_inject_dex = dex_path
-    self.lib_path = lib_path
-    if class_name:
-      self.class_name = class_name
 
   @broadcast_api
   def process_disconnect(self, pid: int) -> void:

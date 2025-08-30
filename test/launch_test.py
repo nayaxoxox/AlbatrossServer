@@ -1,3 +1,4 @@
+import sys
 import time
 
 import albatross
@@ -17,12 +18,13 @@ def main(device_id=None):
       continue
     print('try test', pkg)
     device.launch(pkg, inject_dex, None, inject_class)
-    time.sleep(2)
+    time.sleep(3)
     for i in range(3):
       device.switch_app()
       time.sleep(1)
       device.switch_app()
   print('finish test')
+  sys.stdin.read()
 
 
 if __name__ == '__main__':

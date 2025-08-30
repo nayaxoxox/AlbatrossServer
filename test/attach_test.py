@@ -1,3 +1,4 @@
+import sys
 import time
 
 import albatross
@@ -25,6 +26,7 @@ def main(device_id=None):
       time.sleep(1)
       device.switch_app()
   print('finish test')
+  sys.stdin.read()
 
 
 if __name__ == '__main__':

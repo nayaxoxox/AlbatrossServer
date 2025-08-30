@@ -597,9 +597,6 @@ class AlbatrossDevice(object):
     cmd = self.shellcmd + 'input keyevent KEYCODE_APP_SWITCH'
     run_shell(cmd)
 
-  def __repr__(self):
-    return f'<{self.device_id}>'
-
 
 _device_manager = None
 

@@ -24,7 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import dalvik.system.DexClassLoader;
-import qing.albatross.annotation.ConstructorHookBackup;
+import qing.albatross.annotation.ConstructorBackup;
+import qing.albatross.annotation.ConstructorHook;
+import qing.albatross.annotation.ExecOption;
 import qing.albatross.annotation.MethodBackup;
 import qing.albatross.annotation.MethodHook;
 import qing.albatross.annotation.TargetClass;
@@ -116,14 +118,18 @@ public class AlbatrossInjectEntry {
     }
   }
 
-  @TargetClass
+  @TargetClass(targetExec = ExecOption.DO_NOTHING, hookerExec = ExecOption.DO_NOTHING)
   static class InstrumentationConstructorHook {
 
-    @ConstructorHookBackup
+    @ConstructorBackup
+    static native void init$Backup(Instrumentation instrumentation);
+
+
+    @ConstructorHook
     static void init(Instrumentation instrumentation) throws AlbatrossErr {
       Albatross.hookObject(InstrumentationHook.class, instrumentation);
+      init$Backup(instrumentation);
     }
-
   }
 
   public static void init() {
